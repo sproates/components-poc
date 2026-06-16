@@ -1,0 +1,90 @@
+{
+  "name": "@poc/design-system-components",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "POC reusable TypeScript component library with Storybook functional and performance testing.",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./atoms": {
+      "types": "./dist/atoms.d.ts",
+      "import": "./dist/atoms.js"
+    },
+    "./atoms/Button": {
+      "types": "./dist/Button.d.ts",
+      "import": "./dist/Button.js"
+    },
+    "./atoms/Checkbox": {
+      "types": "./dist/Checkbox.d.ts",
+      "import": "./dist/Checkbox.js"
+    },
+    "./atoms/TextInput": {
+      "types": "./dist/TextInput.d.ts",
+      "import": "./dist/TextInput.js"
+    },
+    "./molecules": {
+      "types": "./dist/molecules.d.ts",
+      "import": "./dist/molecules.js"
+    },
+    "./molecules/FormField": {
+      "types": "./dist/FormField.d.ts",
+      "import": "./dist/FormField.js"
+    },
+    "./molecules/LoginForm": {
+      "types": "./dist/LoginForm.d.ts",
+      "import": "./dist/LoginForm.js"
+    },
+    "./styles.css": "./dist/styles.css"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "build:all": "npm run typecheck && npm run build && npm run build:storybook",
+    "storybook": "npm run build:storybook && npm run serve:storybook",
+    "serve:storybook": "python3 -m http.server 6006 -d storybook-static --bind 127.0.0.1",
+    "build:storybook": "HOME=$PWD/.cache/storybook STORYBOOK_DISABLE_TELEMETRY=1 storybook build --disable-telemetry",
+    "install:browsers": "PLAYWRIGHT_BROWSERS_PATH=$PWD/.cache/ms-playwright playwright install chromium",
+    "test": "npm run test:all",
+    "test:functional": "HOME=$PWD/.cache/storybook STORYBOOK_DISABLE_TELEMETRY=1 PLAYWRIGHT_BROWSERS_PATH=$PWD/.cache/ms-playwright test-storybook --url http://127.0.0.1:6006 --maxWorkers=2",
+    "test:functional:ci": "npm run build:storybook && concurrently -k -s first -n storybook,test \"npm:serve:storybook\" \"wait-on http://127.0.0.1:6006/index.html && npm run test:functional\"",
+    "test:perf": "PLAYWRIGHT_BROWSERS_PATH=$PWD/.cache/ms-playwright playwright test --config playwright.perf.config.ts",
+    "test:all": "npm run typecheck && npm run test:functional:ci && npm run test:perf",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "dependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0",
+    "@storybook/addon-a11y": "^8.6.14",
+    "@storybook/addon-essentials": "^8.6.18",
+    "@storybook/addon-interactions": "^8.6.18",
+    "@storybook/react-vite": "^8.6.14",
+    "@storybook/test": "^8.6.14",
+    "@storybook/test-runner": "^0.22.0",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.2",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "vite-plugin-dts": "^4.5.4",
+    "wait-on": "^8.0.3"
+  }
+}
