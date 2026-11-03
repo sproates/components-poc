@@ -41,6 +41,8 @@ npm run report:perf
 
 Functional tests run the Storybook preview through Vitest in Chromium; they do not require a running Storybook server. Performance commands build a fresh static Storybook and serve it on an isolated temporary port, so your open development server is not reused or stopped. `test:functional:ci` remains an alias for `test:functional`.
 
+`npm run demo:comparisons` runs the two healthy-versus-faulty performance comparisons and generates their charts. Both tests should pass because they check that the harness distinguishes healthy behaviour from deliberate faults.
+
 `npm run demo:failures` deliberately exits nonzero with two performance budget failures. It is excluded from `npm test`. Open the resulting report with `npm run report:perf`; each performance run replaces the previous report.
 
 ## Import examples
@@ -60,11 +62,19 @@ All 18 components have lifecycle cases. Complex cases supply an optional `exerci
 
 React Aria supplies focus, keyboard and selection behaviour; Radix supplies toast lifecycle management; React Hook Form supplies validation; TanStack Table v9's compatibility adapter supplies row models. Runtime dependencies are externalized from the library build and installed normally for consumers. Individual subpath imports avoid loading unrelated library components; dependency costs still apply to the components that use them.
 
-See [the demo guide](docs/demo.md) for the presentation sequence, metrics, expected failures and limitations. Tests are regression signals, not proof that a component can never leak. Timing budgets are illustrative, not hardware-independent SLOs.
+See [How Memory Testing Works](docs/how-memory-testing-works.md) for cleanup measurements and controlled failure cases, and [Adding Runtime Checks](docs/adopting-runtime-checks.md) for harness integration. Tests are regression signals, not proof that a component can never leak. Timing budgets are illustrative, not hardware-independent SLOs.
 
 ## Component authoring
 
 See [Creating a Component](docs/creating-a-component.md) for the full workflow.
+
+## Guides
+
+- [How Memory Testing Works](docs/how-memory-testing-works.md): measurement cycles, budgets, commands and limitations.
+- [Adopting Story Tests](docs/adopting-story-tests.md): addon setup, story selection and CI integration in an existing repository.
+- [Adding Runtime Checks](docs/adopting-runtime-checks.md): shared harness integration, lifecycle fixtures, budgets and controlled regression checks.
+
+The adoption guides are generic recipes. Verify compatibility and configuration in the destination repository before enabling CI gates.
 
 ## Dependency Audit
 

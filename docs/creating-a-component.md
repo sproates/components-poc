@@ -222,7 +222,7 @@ Budget guidance:
 
 Start with conservative budgets for a POC, then tighten them once you have stable baseline numbers in CI.
 
-See [the demo guide](demo.md) for measurement details and the healthy/leaking controls. Performance failures attach raw JSON; comparison tests also attach charts. `npm run demo:failures` demonstrates intentionally failing budgets and must not be used as the normal CI command.
+See [How Memory Testing Works](how-memory-testing-works.md) for measurement details and the healthy/leaking controls. Performance failures attach raw JSON; comparison tests also attach charts. `npm run demo:failures` demonstrates intentionally failing budgets and must not be used as the normal CI command.
 
 ## 8. Run Verification
 

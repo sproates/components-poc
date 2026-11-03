@@ -121,6 +121,7 @@
     "test:all": "npm run typecheck && npm run build && npm run test:package && node scripts/run-tests.mjs all",
     "test:package": "node scripts/check-package.mjs && tsc --ignoreConfig --noEmit --skipLibCheck --moduleResolution bundler --module esnext --jsx react-jsx --types react,node tests/package-consumer.tsx",
     "report:perf": "playwright show-report",
+    "demo:comparisons": "node scripts/run-tests.mjs perf --grep 'detector accepts'",
     "demo:failures": "DEMO_FAILURES=1 node scripts/run-tests.mjs perf --grep 'intentional failures'",
     "typecheck": "tsc --noEmit"
   },
