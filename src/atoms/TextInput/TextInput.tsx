@@ -7,7 +7,7 @@ export interface TextInputProps extends InputHTMLAttributes<HTMLInputElement> {
 
 export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
   ({ "aria-invalid": ariaInvalid, className, isInvalid = false, type = "text", ...props }, ref) => {
-    const invalid = isInvalid || ariaInvalid === true || ariaInvalid === "true";
+    const invalid = isInvalid ? true : ariaInvalid;
 
     return (
       <input

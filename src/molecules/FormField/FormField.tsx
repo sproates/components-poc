@@ -18,16 +18,16 @@ export interface FormFieldProps {
 
 export function FormField({ children, className, error, helpText, id, label }: FormFieldProps) {
   const generatedId = useId();
-  const fieldId = id ?? generatedId;
+  const fieldId = id ?? children.props.id ?? generatedId;
   const messageId = `${fieldId}-message`;
   const hasError = Boolean(error);
   const hasMessage = hasError || Boolean(helpText);
   const childProps = children.props;
 
   const control = cloneElement(children, {
-    "aria-describedby": hasMessage ? messageId : undefined,
+    "aria-describedby": [childProps["aria-describedby"], hasMessage ? messageId : undefined].filter(Boolean).join(" ") || undefined,
     "aria-invalid": hasError || childProps["aria-invalid"] || undefined,
-    id: childProps.id ?? fieldId
+    id: fieldId
   });
 
   return (

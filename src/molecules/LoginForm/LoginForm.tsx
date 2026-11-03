@@ -47,6 +47,7 @@ export function LoginForm({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isSubmitting) return;
     onSubmit({ email, password, remember });
   }
 

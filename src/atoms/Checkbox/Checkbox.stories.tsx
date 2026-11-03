@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "@storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import { Checkbox } from "./Checkbox";
 
 const meta = {
@@ -26,6 +26,21 @@ export const Default: Story = {
 export const Checked: Story = {
   args: {
     defaultChecked: true
+  }
+};
+
+export const KeyboardToggle: Story = {
+  play: async ({ canvasElement, step }) => {
+    const checkbox = within(canvasElement).getByRole("checkbox");
+    checkbox.focus();
+    await step("Space checks the checkbox", async () => {
+      await userEvent.keyboard(" ");
+      await expect(checkbox).toBeChecked();
+    });
+    await step("Space again reverses the state", async () => {
+      await userEvent.keyboard(" ");
+      await expect(checkbox).not.toBeChecked();
+    });
   }
 };
 

@@ -8,13 +8,10 @@ export interface StoryRenderMetric {
   renderMs: number;
 }
 
-export interface ScaleMetric extends StoryRenderMetric {
-  renderedCount: number;
-}
-
 export interface MemoryMetric {
   growthKb: number;
   samplesKb: number[];
+  slopeKbPerCycle: number;
 }
 
 export function storyUrl(
@@ -56,43 +53,81 @@ export async function measureStoryRender(
   };
 }
 
-export async function measureScale(
-  page: Page,
-  storyId: string,
-  selector: string,
-  count: number
-): Promise<ScaleMetric> {
-  const metric = await measureStoryRender(page, storyId, selector, { count });
-  const renderedCount = await page.locator(`${storyRootSelector} [data-perf-subject]`).count();
-
-  return {
-    ...metric,
-    renderedCount
-  };
-}
-
 export async function measureMemoryGrowth(
   context: BrowserContext,
   page: Page,
   storyId: string,
-  selector: string,
-  iterations: number
+  iterations: number,
+  exercise?: (page: Page) => Promise<void>
 ): Promise<MemoryMetric> {
+  if (!Number.isInteger(iterations) || iterations < 2) throw new Error("At least two memory cycles are required");
+  await openLifecycleStory(page, storyId);
   const client = await context.newCDPSession(page);
   const samplesKb: number[] = [];
-
-  for (let index = 0; index < iterations; index += 1) {
-    await measureStoryRender(page, storyId, selector);
-    await client.send("HeapProfiler.collectGarbage");
-    samplesKb.push(await usedHeapKb(page));
+  try {
+    // Warm React and Storybook caches before taking a baseline. Never navigate in this loop.
+    for (let index = 0; index < 3; index += 1) await lifecycleCycle(page, exercise);
+    for (let index = 0; index <= iterations; index += 1) {
+      if (index > 0) await lifecycleCycle(page, exercise);
+      await client.send("HeapProfiler.collectGarbage");
+      const { usedSize } = await client.send("Runtime.getHeapUsage");
+      if (!Number.isFinite(usedSize) || usedSize <= 0) throw new Error("Heap measurement unavailable");
+      samplesKb.push(Math.round(usedSize / 1024));
+    }
+  } finally {
+    await client.detach();
   }
-
-  await client.detach();
-
+  const meanX = (samplesKb.length - 1) / 2;
+  const meanY = samplesKb.reduce((a, b) => a + b, 0) / samplesKb.length;
+  const slope = samplesKb.reduce((sum, y, x) => sum + (x - meanX) * (y - meanY), 0)
+    / samplesKb.reduce((sum, _, x) => sum + (x - meanX) ** 2, 0);
   return {
     growthKb: Math.max(0, samplesKb[samplesKb.length - 1] - samplesKb[0]),
-    samplesKb
+    samplesKb,
+    slopeKbPerCycle: Math.round(slope * 10) / 10
   };
+}
+
+async function lifecycleCycle(page: Page, exercise?: (page: Page) => Promise<void>) {
+  await page.evaluate(async () => {
+    if (!window.componentPerf) throw new Error("Missing component benchmark controller");
+    await window.componentPerf.mount(1);
+  });
+  await exercise?.(page);
+  await page.evaluate(() => window.componentPerf!.unmount());
+  if (await page.locator("[data-benchmark-subjects] [data-perf-subject]").count() !== 0) {
+    throw new Error("Benchmark failed to unmount its subjects");
+  }
+}
+
+async function openLifecycleStory(page: Page, storyId: string) {
+  await page.goto(storyUrl(storyId));
+  await page.waitForFunction(() => Boolean(window.componentPerf));
+}
+
+export async function measureRenderCurve(page: Page, storyId: string, counts: number[]) {
+  await openLifecycleStory(page, storyId);
+  await lifecycleCycle(page);
+  const points = [];
+  for (const count of counts) {
+    const samplesMs: number[] = [];
+    for (let sample = 0; sample < 3; sample += 1) {
+      const duration = await page.evaluate(async (instances) => {
+        const controller = window.componentPerf!;
+        await controller.unmount();
+        const start = performance.now();
+        await controller.mount(instances);
+        const rendered = document.querySelectorAll("[data-benchmark-subjects] [data-perf-subject]").length;
+        if (rendered !== instances) throw new Error(`Expected ${instances} subjects, got ${rendered}`);
+        return performance.now() - start;
+      }, count);
+      samplesMs.push(duration);
+    }
+    const sorted = [...samplesMs].sort((a, b) => a - b);
+    points.push({ count, medianMs: sorted[1], samplesMs });
+  }
+  await page.evaluate(() => window.componentPerf!.unmount());
+  return points;
 }
 
 export async function attachMetric(
@@ -113,17 +148,4 @@ async function waitForStableAnimationFrame(page: Page) {
         requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
       })
   );
-}
-
-async function usedHeapKb(page: Page) {
-  const bytes = await page.evaluate(() => {
-    const memory = (
-      performance as Performance & {
-        memory?: { usedJSHeapSize: number };
-      }
-    ).memory;
-    return memory?.usedJSHeapSize ?? 0;
-  });
-
-  return Math.round(bytes / 1024);
 }

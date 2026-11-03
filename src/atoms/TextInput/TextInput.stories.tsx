@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "@storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import { TextInput } from "./TextInput";
 
 const meta = {
@@ -48,5 +48,20 @@ export const Disabled: Story = {
   args: {
     disabled: true,
     defaultValue: "Read only"
+  }
+};
+
+export const EditAndClear: Story = {
+  args: { defaultValue: "Old name", maxLength: 8 },
+  play: async ({ canvasElement, step }) => {
+    const input = within(canvasElement).getByRole("textbox");
+    await step("Existing values can be cleared", async () => {
+      await userEvent.clear(input);
+      await expect(input).toHaveValue("");
+    });
+    await step("Native length constraints are respected", async () => {
+      await userEvent.type(input, "1234567890");
+      await expect(input).toHaveValue("12345678");
+    });
   }
 };

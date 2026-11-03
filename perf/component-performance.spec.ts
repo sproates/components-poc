@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { componentPerfCases } from "./component-perf.config";
-import { attachMetric, measureMemoryGrowth, measureScale, measureStoryRender } from "./harness";
+import { attachMetric, measureMemoryGrowth, measureRenderCurve, measureStoryRender } from "./harness";
 
 test.describe("Storybook component performance", () => {
   for (const componentCase of componentPerfCases) {
@@ -12,16 +12,15 @@ test.describe("Storybook component performance", () => {
     });
 
     test(`${componentCase.name} scales within budget`, async ({ page }, testInfo) => {
-      const metric = await measureScale(
+      const curve = await measureRenderCurve(
         page,
-        componentCase.scaleStoryId,
-        componentCase.selector,
-        componentCase.scaleCount
+        componentCase.lifecycleStoryId,
+        [1, Math.ceil(componentCase.scaleCount / 2), componentCase.scaleCount]
       );
-
-      await attachMetric(testInfo, `${componentCase.name}-scale`, metric);
-      expect(metric.renderedCount).toBe(componentCase.scaleCount);
-      expect(metric.renderMs).toBeLessThanOrEqual(componentCase.budgets.scaleRenderMs);
+      await attachMetric(testInfo, `${componentCase.name}-scale-curve`, curve);
+      for (const point of curve) {
+        expect(point.medianMs, `${point.count} instances exceeded scaleRenderMs`).toBeLessThanOrEqual(componentCase.budgets.scaleRenderMs);
+      }
     });
 
     test(`${componentCase.name} does not show sustained heap growth`, async ({
@@ -31,13 +30,14 @@ test.describe("Storybook component performance", () => {
       const metric = await measureMemoryGrowth(
         context,
         page,
-        componentCase.storyId,
-        componentCase.selector,
-        componentCase.memoryIterations
+        componentCase.lifecycleStoryId,
+        componentCase.memoryIterations,
+        componentCase.exercise
       );
 
       await attachMetric(testInfo, `${componentCase.name}-memory`, metric);
       expect(metric.growthKb).toBeLessThanOrEqual(componentCase.budgets.memoryGrowthKb);
+      expect(metric.slopeKbPerCycle).toBeLessThanOrEqual(componentCase.budgets.memoryGrowthKb / componentCase.memoryIterations);
     });
   }
 });

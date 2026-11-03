@@ -15,6 +15,7 @@ function range(count: number) {
 
 const meta: Meta<ScaleArgs> = {
   title: "Performance/Component Scenarios",
+  tags: ["performance"],
   parameters: {
     layout: "padded",
     controls: {

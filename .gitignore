@@ -7,6 +7,7 @@ storybook-static/
 
 # Test and coverage output
 test-results/
+**/__screenshots__/
 playwright-report/
 coverage/
 

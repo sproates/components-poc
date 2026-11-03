@@ -3,7 +3,7 @@ import "../src/styles.css";
 
 const preview: Preview = {
   parameters: {
-    actions: { argTypesRegex: "^on[A-Z].*" },
+    a11y: { test: "error" },
     controls: {
       matchers: {
         color: /(background|color)$/i,

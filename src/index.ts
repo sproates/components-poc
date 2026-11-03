@@ -1,4 +1,5 @@
 import "./styles.css";
 
-export * from "./atoms";
-export * from "./molecules";
+export * from "./atoms/index";
+export * from "./molecules/index";
+export * from "./organisms/index";

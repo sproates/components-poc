@@ -2,12 +2,15 @@
 
 This guide describes how to add a reusable component to the library and make it available in Storybook, functional tests, and performance tests. The example uses a simple `Label` atom.
 
+Label now exists in the library. Treat this as a worked walkthrough; choose a new component name when extending the suite.
+
 ## 1. Choose The Atomic Level
 
 Place the component according to atomic design:
 
 - Atoms: simple reusable primitives such as `Button`, `TextInput`, `Checkbox`, `Label`.
 - Molecules: small compositions of atoms such as `FormField` or `LoginForm`.
+- Organisms: larger reusable compositions such as `DataTable` or `ValidatedForm`. Keep domain-specific workflows in `src/examples`.
 
 For `Label`, use:
 
@@ -90,16 +93,12 @@ Add a package subpath export in `package.json`:
 
 ```json
 "./atoms/Label": {
-  "types": "./dist/Label.d.ts",
+  "types": "./dist/atoms/Label/index.d.ts",
   "import": "./dist/Label.js"
 }
 ```
 
-Add a Vite library entry in `vite.config.ts`:
-
-```ts
-Label: resolve(__dirname, "src/atoms/Label/index.ts")
-```
+Vite derives its library entries from `package.json` exports, so no separate build-entry list needs updating. Keep the component's source in `src/atoms/Label/index.ts` (or its corresponding atomic level).
 
 After this, consumers can import the component directly:
 
@@ -111,12 +110,12 @@ import { Label } from "@poc/design-system-components/atoms/Label";
 
 Every component should have at least one Storybook story and enough variants to cover expected states.
 
-Functional tests live inside Storybook `play` functions. The Storybook test runner executes those play functions against the built Storybook instance.
+Functional tests live inside Storybook `play` functions. Storybook's Vitest addon executes them in Chromium using the Storybook preview configuration. They can also be replayed in the Storybook UI. The accessibility addon is configured to fail tests on violations.
 
 ```tsx
 // src/atoms/Label/Label.stories.tsx
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, within } from "@storybook/test";
+import { expect, within } from "storybook/test";
 import { Label } from "./Label";
 
 const meta = {
@@ -180,6 +179,20 @@ export const LabelScale: Story = {
 
 Use `data-perf-subject=""` on each repeated unit. The generic harness counts these elements to verify the requested scale was rendered.
 
+Also add a lifecycle story to `src/performance/LifecycleScenarios.stories.tsx`. Import `Label` there, then add:
+
+```tsx
+export const LabelLifecycle: Story = {
+  render: () => (
+    <PerformanceLab renderSubjects={(count) => subjects(count, (index) => (
+      <Label htmlFor={`field-${index}`}>Field {index + 1}</Label>
+    ))} />
+  )
+};
+```
+
+`PerformanceLab` exposes mount/unmount operations to the browser test. `subjects` adds the count markers. This is how the generic harness measures render cost and cleanup without navigating away between cycles. Keep benchmark utilities out of the package's public exports.
+
 ## 7. Register Performance Budgets
 
 Add a new case to `perf/component-perf.config.ts`:
@@ -188,7 +201,7 @@ Add a new case to `perf/component-perf.config.ts`:
 {
   name: "Label",
   storyId: "atoms-label--default",
-  scaleStoryId: "performance-component-scenarios--label-scale",
+  lifecycleStoryId: "performance-lifecycle-scenarios--label-lifecycle",
   selector: ".ds-label",
   scaleCount: 300,
   memoryIterations: 12,
@@ -202,12 +215,14 @@ Add a new case to `perf/component-perf.config.ts`:
 
 Budget guidance:
 
-- `renderMs`: single-story render budget.
-- `scaleRenderMs`: render budget for many component instances.
-- `memoryGrowthKb`: allowed heap growth after repeated story loads and garbage collection.
-- `memoryIterations`: number of repeated story loads for leak detection.
+- `renderMs`: navigation-to-visible smoke-test budget, including Storybook startup.
+- `scaleRenderMs`: median same-page mount budget, checked at 1, half maximum, and maximum instances, with three samples each.
+- `memoryGrowthKb`: allowed retained JavaScript heap growth after same-page mount/unmount cycles and garbage collection (KiB).
+- `memoryIterations`: measured mount/unmount cycles after three warmup cycles and a baseline sample. The fitted growth slope is also checked.
 
 Start with conservative budgets for a POC, then tighten them once you have stable baseline numbers in CI.
+
+See [the demo guide](demo.md) for measurement details and the healthy/leaking controls. Performance failures attach raw JSON; comparison tests also attach charts. `npm run demo:failures` demonstrates intentionally failing budgets and must not be used as the normal CI command.
 
 ## 8. Run Verification
 
@@ -252,7 +267,7 @@ Then open `http://127.0.0.1:6006`.
 - Component styles use shared design tokens.
 - Component is exported from its atomic or molecular barrel file.
 - Component has a package subpath export in `package.json`.
-- Component has a Vite library entry in `vite.config.ts`.
+- Component's package export resolves to its source folder and generated declarations.
 - Storybook stories cover default and important variant states.
 - Functional assertions are included in Storybook `play` functions.
 - Scalable performance story exists in `src/performance/ComponentScenarios.stories.tsx`.

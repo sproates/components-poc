@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn, userEvent, within } from "@storybook/test";
+import { expect, fn, userEvent, within } from "storybook/test";
 import { Button } from "./Button";
 
 const meta = {
@@ -59,5 +59,32 @@ export const FullWidth: Story = {
   },
   parameters: {
     layout: "padded"
+  }
+};
+
+export const KeyboardActivation: Story = {
+  play: async ({ args, canvasElement, step }) => {
+    const button = within(canvasElement).getByRole("button");
+    await step("Keyboard focus reaches the button", async () => {
+      button.focus();
+      await expect(button).toHaveFocus();
+    });
+    await step("Enter and Space each emit one click", async () => {
+      await userEvent.keyboard("{Enter}");
+      await userEvent.keyboard(" ");
+      await expect(args.onClick).toHaveBeenCalledTimes(2);
+    });
+  }
+};
+
+export const DisabledPreventsEvents: Story = {
+  args: { disabled: true },
+  play: async ({ args, canvasElement, step }) => {
+    await step("Disabled buttons cannot invoke callbacks", async () => {
+      const button = within(canvasElement).getByRole("button");
+      await expect(button).toBeDisabled();
+      await userEvent.click(button);
+      await expect(args.onClick).not.toHaveBeenCalled();
+    });
   }
 };

@@ -3,19 +3,20 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./perf",
   fullyParallel: false,
+  workers: 1,
   timeout: 30_000,
   expect: {
     timeout: 5_000
   },
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
-    baseURL: "http://127.0.0.1:6006",
+    baseURL: process.env.STORYBOOK_URL ?? "http://127.0.0.1:6006",
     trace: "retain-on-failure"
   },
-  webServer: {
+  webServer: process.env.STORYBOOK_URL ? undefined : {
     command: "npm run build:storybook && npm run serve:storybook",
     url: "http://127.0.0.1:6006",
-    reuseExistingServer: true,
+    reuseExistingServer: false,
     timeout: 120_000
   },
   projects: [
@@ -23,6 +24,8 @@ export default defineConfig({
       name: "chromium",
       use: {
         ...devices["Desktop Chrome"],
+        // Use the full browser's headless mode, not the separate headless shell.
+        channel: "chromium",
         launchOptions: {
           args: ["--js-flags=--expose-gc"]
         }
