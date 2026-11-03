@@ -10,11 +10,20 @@ const env = {
   PLAYWRIGHT_BROWSERS_PATH: resolve('.cache/ms-playwright')
 };
 let child;
-function run(command, args) {
+function run(command, args, quiet = false) {
   return new Promise((resolve, reject) => {
-    child = spawn(command, args, { stdio: 'inherit', env });
+    child = spawn(command, args, { stdio: quiet ? ['ignore', 'pipe', 'pipe'] : 'inherit', env });
+    let output = '';
+    child.stdout?.on('data', (chunk) => { output += chunk; });
+    child.stderr?.on('data', (chunk) => { output += chunk; });
     child.once('error', reject);
-    child.once('exit', (code) => code === 0 ? resolve() : reject(new Error(`${command} exited ${code}`)));
+    child.once('exit', (code) => {
+      if (code === 0) resolve();
+      else {
+        if (quiet) console.error(output);
+        reject(new Error(`${command} exited ${code}`));
+      }
+    });
   });
 }
 for (const signal of ['SIGINT', 'SIGTERM']) {
@@ -27,7 +36,9 @@ try {
     await run(resolve('node_modules/.bin/vitest'), ['run', '--config', 'vitest.config.ts']);
   }
   if (mode !== 'functional') {
-    await run('npm', ['run', 'build:storybook']);
+    const demo = env.DEMO_FAILURES === '1';
+    if (demo) console.log('Building Storybook...');
+    await run('npm', ['run', 'build:storybook'], demo);
     server = await serve();
     env.STORYBOOK_URL = `http://127.0.0.1:${server.address().port}`;
     console.log(`Testing fresh Storybook at ${env.STORYBOOK_URL}`);

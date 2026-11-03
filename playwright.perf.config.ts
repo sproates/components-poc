@@ -8,7 +8,7 @@ export default defineConfig({
   expect: {
     timeout: 5_000
   },
-  reporter: [["list"], ["html", { open: "never" }]],
+  reporter: [[process.env.DEMO_FAILURES === "1" ? "./perf/demo-reporter.ts" : "list"], ["html", { open: "never" }]],
   use: {
     baseURL: process.env.STORYBOOK_URL ?? "http://127.0.0.1:6006",
     trace: "retain-on-failure"

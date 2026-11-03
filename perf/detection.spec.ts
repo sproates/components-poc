@@ -40,11 +40,13 @@ test.describe("intentional failures", () => {
   test("missing cleanup exceeds the heap budget", async ({ page, context }, info) => {
     const metric = await measureMemoryGrowth(context, page, `${prefix}leaking-listener`, 10);
     await attachMetric(info, "leak-over-budget", metric);
+    await attachMetric(info, "demo-budget", { label: "Retained heap growth", measured: metric.growthKb, budget: heapBudgetKb, unit: "KiB" });
     expect(metric.growthKb).toBeLessThanOrEqual(heapBudgetKb);
   });
   test("blocking work exceeds the render budget", async ({ page }, info) => {
     const curve = await measureRenderCurve(page, `${prefix}slow-render`, [1, 10, 30]);
     await attachMetric(info, "slow-over-budget", curve);
+    await attachMetric(info, "demo-budget", { label: "Render 30 instances", measured: curve[2].medianMs, budget: renderBudgetMs, unit: "ms" });
     expect(curve[2].medianMs).toBeLessThanOrEqual(renderBudgetMs);
   });
 });
